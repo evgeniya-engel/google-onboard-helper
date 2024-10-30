@@ -1,9 +1,13 @@
 import streamlit as st
 import re
+import os
 
 import numpy as np
 import pandas as pd
 from ruamel.yaml import YAML
+yaml = YAML(typ='rt')
+
+from onboarding_utils import *
 
 # UI
 tab_config_exporter, tab_stubby = st.tabs(["Config Exporter", "Stubby Commands"])
@@ -17,22 +21,156 @@ with tab_config_exporter:
         placeholder="Select operation...",
     )
     if helper_option=="Export Update Config":
+        file_export_path = st.text_input("File Export Path")
         building_config_file = st.file_uploader("Building Config", type=None, accept_multiple_files=False, key=None, help=None, on_change=None)
         abel_config_file = st.file_uploader("ABEL Config", type=None, accept_multiple_files=False, key=None, help=None, on_change=None)
 
+        abel_config = None
+        building_config = None
+
+        save_folder = "files"
+
+        if not os.path.exists(save_folder):
+            os.makedirs(save_folder)
+
         if building_config_file:
-            building_config_bytes = building_config_file.getvalue()
-            with open(building_config_bytes, 'r') as f:
+            building_config_bytes = building_config_file.read()
+            building_config_bytes = building_config_bytes.decode("UTF-8")
+
+            with open(f"{save_folder}/{building_config_file.name}", "w") as f:
+                f.write(building_config_bytes)
+
+            with open(f"{save_folder}/{building_config_file.name}", 'r') as f:
                 building_config = yaml.load(f)
                 f.close()
-            st.write([key for key in building_config.keys()])
+            os.remove(f"{save_folder}/{building_config_file.name}")
+
         if abel_config_file:     
-            abel_config_bytes = abel_config_file.getvalue()
-            with open(abel_config_bytes, 'r') as f:
+            abel_config_bytes = abel_config_file.read()
+            abel_config_bytes = abel_config_bytes.decode("UTF-8")
+
+            with open(f"{save_folder}/{abel_config_file.name}", "w") as f:
+                f.write(abel_config_bytes)
+
+            with open(f"{save_folder}/{abel_config_file.name}", 'r') as f:
                 abel_config = yaml.load(f)
                 f.close()
-            st.write([key for key in abel_config.keys()])
+            os.remove(f"{save_folder}/{abel_config_file.name}")
 
+        export = st.button("Export")
+        if export:
+            if building_config and abel_config and file_export_path:
+                status = export_update_config(building_config, abel_config, file_export_path)
+
+                if len(status['errors']) > 0:
+                    st.write("Errors found:")
+                    st.write([_ for _ in status['errors']])
+                if len(status['saved_files']) > 0:
+                    st.write("Saved files:")
+                    st.write([_ for _ in status['saved_files']])
+                if len(status['added_entities']) > 0:
+                    st.write("Added entities:")
+                    st.write([_ for _ in status['added_entities']])
+    if helper_option=="Export Add Config":
+        file_export_path = st.text_input("File Export Path")
+        building_config_file = st.file_uploader("Building Config", type=None, accept_multiple_files=False, key=None, help=None, on_change=None)
+        abel_config_file = st.file_uploader("ABEL Config", type=None, accept_multiple_files=False, key=None, help=None, on_change=None)
+
+        abel_config = None
+        building_config = None
+
+        save_folder = "files"
+
+        if not os.path.exists(save_folder):
+            os.makedirs(save_folder)
+
+        if building_config_file:
+            building_config_bytes = building_config_file.read()
+            building_config_bytes = building_config_bytes.decode("UTF-8")
+
+            with open(f"{save_folder}/{building_config_file.name}", "w") as f:
+                f.write(building_config_bytes)
+
+            with open(f"{save_folder}/{building_config_file.name}", 'r') as f:
+                building_config = yaml.load(f)
+                f.close()
+            os.remove(f"{save_folder}/{building_config_file.name}")
+
+        if abel_config_file:     
+            abel_config_bytes = abel_config_file.read()
+            abel_config_bytes = abel_config_bytes.decode("UTF-8")
+
+            with open(f"{save_folder}/{abel_config_file.name}", "w") as f:
+                f.write(abel_config_bytes)
+
+            with open(f"{save_folder}/{abel_config_file.name}", 'r') as f:
+                abel_config = yaml.load(f)
+                f.close()
+            os.remove(f"{save_folder}/{abel_config_file.name}")
+
+        export = st.button("Export")
+        if export:
+            if building_config and abel_config and file_export_path:
+                status = export_add_config(building_config, abel_config, file_export_path)
+
+                if len(status['errors']) > 0:
+                    st.write("Errors found:")
+                    st.write([_ for _ in status['errors']])
+                if len(status['saved_files']) > 0:
+                    st.write("Saved files:")
+                    st.write([_ for _ in status['saved_files']])
+                if len(status['added_entities']) > 0:
+                    st.write("Added entities:")
+                    st.write([_ for _ in status['added_entities']])
+
+    if helper_option=="Update Etags":
+        file_export_path = st.text_input("File Export Path")
+        building_config_file = st.file_uploader("Building Config", type=None, accept_multiple_files=False, key=None, help=None, on_change=None)
+        abel_config_file = st.file_uploader("ABEL Config", type=None, accept_multiple_files=False, key=None, help=None, on_change=None)
+
+        abel_config = None
+        building_config = None
+
+        save_folder = "files"
+
+        if not os.path.exists(save_folder):
+            os.makedirs(save_folder)
+
+        if building_config_file:
+            building_config_bytes = building_config_file.read()
+            building_config_bytes = building_config_bytes.decode("UTF-8")
+
+            with open(f"{save_folder}/{building_config_file.name}", "w") as f:
+                f.write(building_config_bytes)
+
+            with open(f"{save_folder}/{building_config_file.name}", 'r') as f:
+                building_config = yaml.load(f)
+                f.close()
+            os.remove(f"{save_folder}/{building_config_file.name}")
+
+        if abel_config_file:     
+            abel_config_bytes = abel_config_file.read()
+            abel_config_bytes = abel_config_bytes.decode("UTF-8")
+
+            with open(f"{save_folder}/{abel_config_file.name}", "w") as f:
+                f.write(abel_config_bytes)
+
+            with open(f"{save_folder}/{abel_config_file.name}", 'r') as f:
+                abel_config = yaml.load(f)
+                f.close()
+            os.remove(f"{save_folder}/{abel_config_file.name}")
+
+        export = st.button("Export")
+        if export:
+            if building_config and abel_config:
+                status = update_etags(building_config, abel_config, file_export_path)
+
+                if len(status['errors']) > 0:
+                    st.write("Errors found:")
+                    st.write([_ for _ in status['errors']])
+                if len(status['saved_files']) > 0:
+                    st.write("Saved files:")
+                    st.write([_ for _ in status['saved_files']])
 
 with tab_stubby:
     st.subheader('Stubby Commands')
