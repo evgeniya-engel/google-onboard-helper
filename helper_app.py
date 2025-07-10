@@ -13,22 +13,44 @@ from onboarding_utils import *
 tab_config_exporter, tab_stubby = st.tabs(["Config Exporter", "Stubby Commands"])
 
 
+def clear_folder(folder_path):
+    """
+    Removes all files from the specified folder.
+    Leaves subdirectories intact.
+    """
+    if not os.path.exists(folder_path):
+        print(f"Error: Folder '{folder_path}' does not exist.")
+        return
+
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)  # os.unlink is an alias for os.remove
+            # else:
+            #     print(f"Skipping directory: {file_path}")
+        except OSError as e:
+            print(f"Error deleting file {file_path}: {e}")
+    print(f"All files removed from '{folder_path}'.")
+
 with tab_config_exporter:
     helper_option = st.selectbox(
         "Select operation",
-        ("Export Update Config", "Export Add Config", "Update Etags"),
+        ("Export Reporting Entity Config", "Export Virtual Entity Config", "Update Etags"),
         index=None,
         placeholder="Select operation...",
     )
-    if helper_option=="Export Update Config":
+    if helper_option=="Export Reporting Entity Config":
         file_export_path = st.text_input("File Export Path")
         building_config_file = st.file_uploader("Building Config", type=None, accept_multiple_files=False, key=None, help=None, on_change=None)
         abel_config_file = st.file_uploader("ABEL Config", type=None, accept_multiple_files=False, key=None, help=None, on_change=None)
+        use_abel_flags = st.checkbox("Use 'operation' and 'update_mask' from ABEL config", value=True)
 
         abel_config = None
         building_config = None
 
         save_folder = "files"
+        clear_folder(f'./{save_folder}')
 
         if not os.path.exists(save_folder):
             os.makedirs(save_folder)
@@ -55,12 +77,12 @@ with tab_config_exporter:
             with open(f"{save_folder}/{abel_config_file.name}", 'r') as f:
                 abel_config = yaml.load(f)
                 f.close()
-            os.remove(f"{save_folder}/{abel_config_file.name}")
+            clear_folder(f'./{save_folder}')
 
         export = st.button("Export")
         if export:
             if building_config and abel_config and file_export_path:
-                status = export_update_config(building_config, abel_config, file_export_path)
+                status = export_update_config(building_config, abel_config, use_abel_flags, file_export_path)
 
                 if len(status['errors']) > 0:
                     st.write("Errors found:")
@@ -71,10 +93,11 @@ with tab_config_exporter:
                 if len(status['added_entities']) > 0:
                     st.write("Added entities:")
                     st.write([_ for _ in status['added_entities']])
-    if helper_option=="Export Add Config":
+    if helper_option=="Export Virtual Entity Config":
         file_export_path = st.text_input("File Export Path")
         building_config_file = st.file_uploader("Building Config", type=None, accept_multiple_files=False, key=None, help=None, on_change=None)
         abel_config_file = st.file_uploader("ABEL Config", type=None, accept_multiple_files=False, key=None, help=None, on_change=None)
+        use_abel_flags = st.checkbox("Use 'operation' and 'update_mask' from ABEL config", value=True)
 
         abel_config = None
         building_config = None
@@ -111,7 +134,7 @@ with tab_config_exporter:
         export = st.button("Export")
         if export:
             if building_config and abel_config and file_export_path:
-                status = export_add_config(building_config, abel_config, file_export_path)
+                status = export_add_config(building_config, abel_config, use_abel_flags, file_export_path)
 
                 if len(status['errors']) > 0:
                     st.write("Errors found:")
@@ -173,6 +196,7 @@ with tab_config_exporter:
                     st.write([_ for _ in status['saved_files']])
 
 with tab_stubby:
+
     st.subheader('Stubby Commands')
     dbapi_option = st.selectbox(
         "Select operation",
@@ -191,7 +215,7 @@ with tab_stubby:
         entity_guids_input = st.text_input('Guids (optional)')
         if entity_guids_input:
             entity_guids = re.sub(r"[, \n]+", ',', entity_guids_input)
-            entity_guids = entity_guids.split(",")
+            entity_guids = set(entity_guids.split(","))
             entity_guids = ",".join(f"'{guid}'" for guid in entity_guids)
         
         if building_code_input:
@@ -240,10 +264,10 @@ with tab_stubby:
 
         config_input = st.text_input('Config Path')
         
-        if building_code_input and config_input:
+        if building_code_input and config_input and len(building_split)==3:
             st.code(
                 f"""
-                stubby call blade:google.cloud.digitalbuildings.v1alpha1.digitalbuildingsservice-prod google.cloud.digitalbuildings.v1alpha1.DigitalBuildingsService.OnboardBuilding --print_status_extensions --proto2 "name: 'projects/digitalbuildings/{building_country}/cities/{building_city}/buildings/{building_code}', profile:'projects/digitalbuildings/profiles/MaintenanceOps'" --set_field "topology_file=readfile({config_input})"
+                stubby call blade:google.cloud.digitalbuildings.v1alpha1.digitalbuildingsservice-prod google.cloud.digitalbuildings.v1alpha1.DigitalBuildingsService.OnboardBuilding --print_status_extensions --proto2 "name: 'projects/digitalbuildings/countries/{building_country}/cities/{building_city}/buildings/{building_code}', profile:'projects/digitalbuildings/profiles/MaintenanceOps'" --set_field "topology_file=readfile({config_input})"
                 """,
                 wrap_lines=True
                 )
