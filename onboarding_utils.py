@@ -57,6 +57,9 @@ def export_update_config(building_config, abel_config, abel_flags, dump_path, en
                     val['operation'] =  'UPDATE'
                     val['update_mask'] = ['type', 'translation']
 
+                if val.get('update_mask') and isinstance(val['update_mask'], list):
+                    val['update_mask'] = [i.lower() for i in val['update_mask']]
+
                 update_config[key] = {'etag': etag} \
                                 | val
 
@@ -114,6 +117,9 @@ def export_add_config(building_config, abel_config, abel_flags, dump_path):
             if not abel_flags:
                 val['operation'] = 'ADD'
 
+            if val.get('update_mask') and isinstance(val['update_mask'], list):
+                val['update_mask'] = [i.lower() for i in val['update_mask']]
+
             if val.get('operation')=='ADD':
                 add_virtual[key] = val
             if val.get('operation')=='UPDATE':
@@ -155,7 +161,7 @@ def export_add_config(building_config, abel_config, abel_flags, dump_path):
     if len(reporting_update_virtual) > 0:
         final_file_path = dump_path.replace('.yaml', '_update_virtual.yaml')
         with open(f'{final_file_path}', 'w') as f:
-            for key, value in add_config.items():
+            for key, value in update_config.items():
                 yaml.dump({key: value}, f)
                 f.write('\n')
             f.close()
